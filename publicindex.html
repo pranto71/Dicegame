@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pro Dice Multiplayer</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        body { font-family: sans-serif; text-align: center; background: #1a1a1a; color: white; }
+        .box { border: 1px solid #444; padding: 20px; margin: 10px; border-radius: 10px; }
+        #dice { font-size: 80px; margin: 20px; }
+        button { padding: 10px 20px; cursor: pointer; background: #27ae60; color: white; border: none; }
+        li { list-style: none; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🎲 Real-Money Dice</h1>
+    
+    <div id="login-section" class="box">
+        <input type="text" id="username" placeholder="Enter Username">
+        <button onclick="login()">Enter Game</button>
+    </div>
+
+    <div id="game-section" style="display:none;">
+        <h2 id="user-display"></h2>
+        <h3 id="balance-display">Balance: $0</h3>
+        
+        <div class="box">
+            <div id="dice">🎲</div>
+            <button onclick="roll()">Bet $10 & Roll</button>
+        </div>
+
+        <div class="box">
+            <h3>Online Players</h3>
+            <ul id="user-list"></ul>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        let myUsername = "";
+
+        function login() {
+            myUsername = document.getElementById('username').value;
+            if(myUsername) {
+                socket.emit('joinLobby', myUsername);
+                document.getElementById('login-section').style.display = 'none';
+                document.getElementById('game-section').style.display = 'block';
+                document.getElementById('user-display').innerText = "Player: " + myUsername;
+            }
+        }
+
+        function roll() {
+            socket.emit('rollDice', 10);
+        }
+
+        socket.on('rollResult', (data) => {
+            document.getElementById('dice').innerText = data.roll;
+            document.getElementById('balance-display').innerText = "Balance: $" + data.newBalance;
+        });
+
+        socket.on('updateUserList', (users) => {
+            const list = document.getElementById('user-list');
+            list.innerHTML = "";
+            users.forEach(user => {
+                if(user.username !== myUsername) {
+                    list.innerHTML += `<li>${user.username} <button onclick="challenge('${user.username}')">Request Play</button></li>`;
+                }
+            });
+        });
+
+        function challenge(name) {
+            socket.emit('sendChallenge', name);
+            alert("Challenge sent to " + name);
+        }
+
+        socket.on('receiveChallenge', (from) => {
+            alert(from + " wants to play for money!");
+        });
+    </script>
+</body>
+</html>
